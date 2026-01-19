@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HARBench Leaderboard</title>
+    <link rel="icon" type="image/png" href="harbench_icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-active {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+        }
+        .best-score {
+            font-weight: 700;
+            color: #059669;
+        }
+        .second-score {
+            font-weight: 600;
+            text-decoration: underline;
+        }
+        th {
+            cursor: pointer;
+        }
+        th:hover {
+            background-color: #f3f4f6;
+        }
+        .link-icon {
+            color: #6b7280;
+            font-size: 0.75rem;
+        }
+        .link-icon:hover {
+            color: #2563eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex items-center space-x-4">
+                    <img src="harbench_icon.png" alt="HARBench" class="h-14 w-14">
+                    <div>
+                        <span class="text-blue-600 text-2xl font-bold">HARBench</span>
+                        <br>
+                        <span class="text-sm text-gray-500">Human Activity Recognition Benchmark</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-8">
+                    <a href="#" class="text-blue-600 border-b-2 border-blue-600 pb-1">Leaderboard</a>
+                    <a href="#datasets" class="text-gray-600 hover:text-gray-900">Datasets</a>
+                    <a href="#evaluation" class="text-gray-600 hover:text-gray-900">Evaluation</a>
+                    <a href="https://github.com/litchi7777/harbench" target="_blank" class="text-gray-600 hover:text-gray-900">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">HARBench Leaderboard</h1>
+            <p class="text-sm text-gray-600 mb-1">A comprehensive benchmark for evaluating HAR foundation models.</p>
+            <p class="text-sm text-gray-600 mb-2">Assesses domain robustness, position robustness, few-shot learning, and zero-shot transfer using 32 datasets (2.4M+ hours).</p>
+            <p class="text-sm text-gray-500">
+                IEEE PerCom 2026 ·
+                <a href="#" class="text-blue-600 hover:underline">[Paper]</a>
+                <a href="#" class="text-blue-600 hover:underline">[Cite]</a>
+            </p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="border-b border-gray-200 mb-6">
+            <nav class="flex space-x-8">
+                <button class="tab-btn tab-active px-1 py-4 text-sm font-medium" data-tab="allmetrics">All Metrics</button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="overall">Overall</button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="domain">Domain</button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="position">Position</button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="fewshot">Few-Shot</button>
+                <button class="tab-btn px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="zeroshot">Zero-Shot</button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="tab-content" class="bg-white shadow rounded-lg overflow-hidden">
+            <!-- Tables populated by JavaScript -->
+        </div>
+
+        <!-- Datasets Section -->
+        <section id="datasets" class="mt-10">
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Datasets</h2>
+            <p class="text-sm text-gray-600 mb-3">32 public datasets (14 unlabeled for pretraining, 18 labeled for evaluation) totaling over 2.4 million hours of sensor data.</p>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-white p-3 rounded-lg shadow-sm border">
+                    <h3 class="font-semibold text-gray-900 text-sm mb-1">Daily Activities (10)</h3>
+                    <p class="text-xs text-gray-600">ForthTrace, HARTH, IMWSHA, PAAL, PAMAP2, RealWorld, SelfBack, UCAE-HAR, USC-HAD, WARD</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow-sm border">
+                    <h3 class="font-semibold text-gray-900 text-sm mb-1">Exercise (4)</h3>
+                    <p class="text-xs text-gray-600">DSADS, MEX, MHEALTH, RealDisp</p>
+                </div>
+                <div class="bg-white p-3 rounded-lg shadow-sm border">
+                    <h3 class="font-semibold text-gray-900 text-sm mb-1">Industry (4)</h3>
+                    <p class="text-xs text-gray-600">LARa, OpenPack, Exoskeletons, VTT-ConIoT</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Evaluation Section -->
+        <section id="evaluation" class="mt-8">
+            <h2 class="text-xl font-bold text-gray-900 mb-3">Evaluation Protocol</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white p-4 rounded-lg shadow-sm border">
+                    <h3 class="font-semibold text-gray-900 text-sm mb-2">5 Evaluation Dimensions</h3>
+                    <ul class="text-xs text-gray-600 space-y-1">
+                        <li><strong>Overall:</strong> Average F1 across all 18 datasets</li>
+                        <li><strong>Domain:</strong> Balanced performance across Daily/Exercise/Industry</li>
+                        <li><strong>Position:</strong> Consistency across 8 sensor positions</li>
+                        <li><strong>Few-Shot:</strong> Learning with 1-50% labeled data</li>
+                        <li><strong>Zero-Shot:</strong> Transfer to unseen datasets</li>
+                    </ul>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border">
+                    <h3 class="font-semibold text-gray-900 text-sm mb-2">Standardized Protocol</h3>
+                    <ul class="text-xs text-gray-600 space-y-1">
+                        <li><strong>Sampling Rate:</strong> 30Hz</li>
+                        <li><strong>Window Size:</strong> 5 seconds (150 samples)</li>
+                        <li><strong>Validation:</strong> 4-fold person-independent CV</li>
+                        <li><strong>Metric:</strong> Macro F1 Score</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <p class="text-center text-gray-500 text-xs">
+                HARBench: A Comprehensive Benchmark for Evaluating Foundation Models in Sensor-based Human Activity Recognition
+                ·
+                <a href="https://github.com/litchi7777/harbench" class="text-blue-600 hover:underline">GitHub</a>
+                · IEEE PerCom 2026
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Model metadata with paper/code links
+        // SSL models without public weights use HARBench repo
+        // Models with public weights link to original repos
+        const harbenchRepo = 'https://github.com/litchi7777/harbench';
+        const modelMeta = {
+            'MTL': { paper: 'https://arxiv.org/abs/2206.02909', code: harbenchRepo },  // Multi-task SSL (same approach as HARNet)
+            'HARNet': { paper: 'https://arxiv.org/abs/2206.02909', code: 'https://github.com/OxWearables/ssl-wearables' },
+            'TimeChannel': { paper: 'https://dl.acm.org/doi/10.1145/3410531.3414306', code: harbenchRepo },  // Masked reconstruction (ISWC 2020)
+            'TimeMask': { paper: 'https://dl.acm.org/doi/10.1145/3410531.3414306', code: harbenchRepo },  // Masked reconstruction variant
+            'Supervised': { paper: null, code: harbenchRepo },
+            'Supervised (target)': { paper: null, code: harbenchRepo },
+            'SimCLR': { paper: 'https://arxiv.org/abs/2011.11542', code: harbenchRepo },  // SimCLR for HAR (Tang et al.)
+            'CPC': { paper: 'https://arxiv.org/abs/2012.05333', code: harbenchRepo },  // CPC for HAR (Haresamudram et al.)
+            'MoCo': { paper: 'https://arxiv.org/abs/2011.11542', code: harbenchRepo },  // MoCo for HAR (Tang et al.)
+            'IMU-MAE': { paper: 'https://arxiv.org/abs/2407.06628', code: 'https://github.com/mf-zhang/IMU-Video-MAE' },
+            'PatchTST': { paper: 'https://arxiv.org/abs/2211.14730', code: 'https://github.com/yuqinie98/PatchTST' },
+            'SelfPAB': { paper: 'https://link.springer.com/article/10.1007/s10489-024-05322-3', code: 'https://github.com/ntnu-ai-lab/SelfPAB' },
+            'MOMENT': { paper: 'https://arxiv.org/abs/2402.03885', code: 'https://github.com/moment-timeseries-foundation-model/moment' },
+            'LIMU-BERT': { paper: 'https://dl.acm.org/doi/10.1145/3485730.3485937', code: 'https://github.com/dapowan/LIMU-BERT-Public' }
+        };
+
+        // Data storage
+        let overallData = [];
+        let overallPerDatasetData = [];
+        let positionData = [];
+        let fewshotData = [];
+        let zeroshotData = [];
+        let currentTab = 'allmetrics';
+        let sortCol = null;
+        let sortDir = 'desc';
+
+        // Parse CSV
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',');
+            return lines.slice(1).filter(line => line.trim()).map(line => {
+                const values = line.split(',');
+                const obj = {};
+                headers.forEach((h, i) => {
+                    obj[h.trim()] = isNaN(values[i]) ? values[i]?.trim() : parseFloat(values[i]);
+                });
+                return obj;
+            });
+        }
+
+        // Load all CSVs
+        async function loadAllData() {
+            try {
+                const [overall, overallPerDataset, position, fewshot, zeroshot] = await Promise.all([
+                    fetch('csv/overall_domain.csv').then(r => r.text()),
+                    fetch('csv/overall.csv').then(r => r.text()),
+                    fetch('csv/position.csv').then(r => r.text()),
+                    fetch('csv/fewshot.csv').then(r => r.text()),
+                    fetch('csv/zeroshot.csv').then(r => r.text())
+                ]);
+                overallData = parseCSV(overall);
+                overallPerDatasetData = parseCSV(overallPerDataset);
+                positionData = parseCSV(position);
+                fewshotData = parseCSV(fewshot);
+                zeroshotData = parseCSV(zeroshot);
+                renderCurrentTab();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Find best and second best for each column
+        function findTopTwo(data, cols) {
+            const result = {};
+            cols.forEach(col => {
+                const values = data.map(d => d[col]).filter(v => typeof v === 'number');
+                const sorted = [...values].sort((a, b) => b - a);
+                result[col] = { best: sorted[0], second: sorted[1] };
+            });
+            return result;
+        }
+
+        // Apply styling for best/second scores
+        function scoreClass(value, col, topTwo) {
+            if (!topTwo[col]) return '';
+            if (value === topTwo[col].best) return 'best-score';
+            if (value === topTwo[col].second) return 'second-score';
+            return '';
+        }
+
+        // Sort data
+        function sortData(data, col) {
+            if (sortCol === col) {
+                sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+            } else {
+                sortCol = col;
+                sortDir = 'desc';
+            }
+            return [...data].sort((a, b) => {
+                const av = a[col], bv = b[col];
+                if (typeof av === 'number' && typeof bv === 'number') {
+                    return sortDir === 'desc' ? bv - av : av - bv;
+                }
+                return sortDir === 'desc' ? String(bv).localeCompare(String(av)) : String(av).localeCompare(String(bv));
+            });
+        }
+
+        // Render All Metrics table (averages of each dimension)
+        function renderAllMetricsTable() {
+            const allMetricsData = overallData.map(row => {
+                const posRow = positionData.find(p => p.model === row.model);
+                const fsRow = fewshotData.find(f => f.model === row.model);
+                // For zeroshot, use LODO results (exclude "Supervised (target)" which is upper bound)
+                const zsRow = zeroshotData.find(z => z.model === row.model && z.model !== 'Supervised (target)');
+
+                const overall_avg = row.overall_avg;
+                const domain_avg = row.domain_avg;
+                const position_avg = posRow?.avg;
+                const fewshot_avg = fsRow?.avg;
+                const zeroshot_avg = zsRow?.avg;
+
+                const scores = [overall_avg, domain_avg, position_avg, fewshot_avg, zeroshot_avg].filter(s => typeof s === 'number');
+                const all_metrics = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+
+                return {
+                    model: row.model,
+                    overall_avg,
+                    domain_avg,
+                    position_avg,
+                    fewshot_avg,
+                    zeroshot_avg,
+                    all_metrics
+                };
+            });
+
+            const cols = ['overall_avg', 'domain_avg', 'position_avg', 'fewshot_avg', 'zeroshot_avg', 'all_metrics'];
+            const topTwo = findTopTwo(allMetricsData, cols);
+            const data = sortCol ? sortData(allMetricsData, sortCol) : allMetricsData;
+
+            return `
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-2">All Metrics</h3>
+                    <p class="text-sm text-gray-600 mb-4">Summary of all evaluation dimensions with overall average.</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('model')">Model</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('overall_avg')">Overall</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('domain_avg')">Domain</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('position_avg')">Position</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('fewshot_avg')">Few-Shot</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('zeroshot_avg')">Zero-Shot</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('all_metrics')">All Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${data.map(row => `
+                            <tr>
+                                <td class="px-4 py-3">${renderModelCell(row.model)}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.overall_avg, 'overall_avg', topTwo)}">${row.overall_avg?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.domain_avg, 'domain_avg', topTwo)}">${row.domain_avg?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.position_avg, 'position_avg', topTwo)}">${row.position_avg?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.fewshot_avg, 'fewshot_avg', topTwo)}">${row.fewshot_avg?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.zeroshot_avg, 'zeroshot_avg', topTwo)}">${row.zeroshot_avg?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.all_metrics, 'all_metrics', topTwo)}">${row.all_metrics?.toFixed(3) || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Render model cell with paper/code links
+        function renderModelCell(model) {
+            const meta = modelMeta[model] || {};
+            let links = '';
+            if (meta.paper || meta.code) {
+                links = '<span class="ml-2">';
+                if (meta.paper) {
+                    links += `<a href="${meta.paper}" target="_blank" class="link-icon hover:text-blue-600" title="Paper">[paper]</a>`;
+                }
+                if (meta.code) {
+                    links += `<a href="${meta.code}" target="_blank" class="link-icon hover:text-blue-600 ml-1" title="Code">[code]</a>`;
+                }
+                links += '</span>';
+            }
+            return `<span class="font-medium">${model}</span>${links}`;
+        }
+
+        // Render Overall table (per-dataset accuracy)
+        function renderOverallTable() {
+            // Dataset names grouped by domain
+            const dailyDatasets = ['forthtrace', 'harth', 'imwsha', 'paal', 'pamap2', 'realworld', 'selfback', 'ucaehar', 'uschad', 'ward'];
+            const exerciseDatasets = ['dsads', 'mex', 'mhealth', 'realdisp'];
+            const industryDatasets = ['lara', 'openpack', 'exoskeletons', 'vtt_coniot'];
+            const allDatasets = [...dailyDatasets, ...exerciseDatasets, ...industryDatasets];
+
+            const cols = [...allDatasets, 'avg'];
+            const topTwo = findTopTwo(overallPerDatasetData, cols);
+            const data = sortCol ? sortData(overallPerDatasetData, sortCol) : overallPerDatasetData;
+
+            // Display names for datasets
+            const displayNames = {
+                'forthtrace': 'ForthTrace',
+                'harth': 'HARTH',
+                'imwsha': 'IMWSHA',
+                'paal': 'PAAL',
+                'pamap2': 'PAMAP2',
+                'realworld': 'RealWorld',
+                'selfback': 'SelfBack',
+                'ucaehar': 'UCAE-HAR',
+                'uschad': 'USC-HAD',
+                'ward': 'WARD',
+                'dsads': 'DSADS',
+                'mex': 'MEX',
+                'mhealth': 'MHEALTH',
+                'realdisp': 'RealDisp',
+                'lara': 'LARa',
+                'openpack': 'OpenPack',
+                'exoskeletons': 'Exo',
+                'vtt_coniot': 'VTT'
+            };
+
+            return `
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-2">Overall Performance</h3>
+                    <p class="text-sm text-gray-600 mb-4">Multi-sensor HAR performance (Macro F1) across 18 datasets grouped by domain.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-xs">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 z-10" onclick="sortAndRender('model')">Model</th>
+                                <th colspan="10" class="px-2 py-1 text-center text-xs font-medium text-blue-600 border-b border-blue-200">Daily (10)</th>
+                                <th colspan="4" class="px-2 py-1 text-center text-xs font-medium text-green-600 border-b border-green-200">Exercise (4)</th>
+                                <th colspan="4" class="px-2 py-1 text-center text-xs font-medium text-orange-600 border-b border-orange-200">Industry (4)</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('avg')">Avg</th>
+                            </tr>
+                            <tr>
+                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 sticky left-0 bg-gray-50 z-10"></th>
+                                ${dailyDatasets.map(d => `<th class="px-2 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap" onclick="sortAndRender('${d}')">${displayNames[d]}</th>`).join('')}
+                                ${exerciseDatasets.map(d => `<th class="px-2 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap" onclick="sortAndRender('${d}')">${displayNames[d]}</th>`).join('')}
+                                ${industryDatasets.map(d => `<th class="px-2 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap" onclick="sortAndRender('${d}')">${displayNames[d]}</th>`).join('')}
+                                <th class="px-2 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${data.map(row => `
+                                <tr>
+                                    <td class="px-2 py-2 sticky left-0 bg-white z-10">${renderModelCell(row.model)}</td>
+                                    ${allDatasets.map(d => `<td class="px-2 py-2 ${scoreClass(row[d], d, topTwo)}">${row[d]?.toFixed(3) || '-'}</td>`).join('')}
+                                    <td class="px-2 py-2 font-semibold ${scoreClass(row.avg, 'avg', topTwo)}">${row.avg?.toFixed(3) || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Render Domain table
+        function renderDomainTable() {
+            const cols = ['daily', 'exercise', 'industry', 'domain_avg'];
+            const topTwo = findTopTwo(overallData, cols);
+            const data = sortCol ? sortData(overallData, sortCol) : overallData;
+
+            return `
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-2">Domain Robustness</h3>
+                    <p class="text-sm text-gray-600 mb-4">Performance across different activity domains. Numbers in parentheses indicate the number of datasets.</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('model')">Model</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('daily')">Daily (10)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('exercise')">Exercise (4)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('industry')">Industry (4)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('domain_avg')">Domain Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${data.map(row => `
+                            <tr>
+                                <td class="px-4 py-3">${renderModelCell(row.model)}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.daily, 'daily', topTwo)}">${row.daily?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.exercise, 'exercise', topTwo)}">${row.exercise?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.industry, 'industry', topTwo)}">${row.industry?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.domain_avg, 'domain_avg', topTwo)}">${row.domain_avg?.toFixed(3) || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Render Position table
+        function renderPositionTable() {
+            const cols = ['arm', 'leg', 'front', 'ankle', 'wrist', 'phone', 'back', 'head', 'avg'];
+            const topTwo = findTopTwo(positionData, cols);
+            const data = sortCol ? sortData(positionData, sortCol) : positionData;
+
+            return `
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-2">Position Robustness</h3>
+                    <p class="text-sm text-gray-600 mb-4">Single-sensor HAR performance across sensor placements. Numbers in parentheses indicate configurations.</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('model')">Model</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('arm')">Arm(15)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('leg')">Leg(17)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('front')">Front(11)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('ankle')">Ankle(5)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('wrist')">Wrist(11)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('phone')">Phone(2)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('back')">Back(3)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('head')">Head(2)</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('avg')">Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${data.map(row => `
+                            <tr>
+                                <td class="px-3 py-3">${renderModelCell(row.model)}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.arm, 'arm', topTwo)}">${row.arm?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.leg, 'leg', topTwo)}">${row.leg?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.front, 'front', topTwo)}">${row.front?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.ankle, 'ankle', topTwo)}">${row.ankle?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.wrist, 'wrist', topTwo)}">${row.wrist?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.phone, 'phone', topTwo)}">${row.phone?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.back, 'back', topTwo)}">${row.back?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.head, 'head', topTwo)}">${row.head?.toFixed(3) || '-'}</td>
+                                <td class="px-3 py-3 ${scoreClass(row.avg, 'avg', topTwo)}">${row.avg?.toFixed(3) || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Render Few-shot table
+        function renderFewshotTable() {
+            const cols = ['1pct', '2pct', '5pct', '10pct', '20pct', '50pct', 'avg'];
+            const topTwo = findTopTwo(fewshotData, cols);
+            const data = sortCol ? sortData(fewshotData, sortCol) : fewshotData;
+
+            return `
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-2">Few-shot Learning</h3>
+                    <p class="text-sm text-gray-600 mb-4">Multi-sensor HAR performance with limited labeled data.</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('model')">Model</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('1pct')">1%</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('2pct')">2%</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('5pct')">5%</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('10pct')">10%</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('20pct')">20%</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('50pct')">50%</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('avg')">Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${data.map(row => `
+                            <tr>
+                                <td class="px-4 py-3">${renderModelCell(row.model)}</td>
+                                <td class="px-4 py-3 ${scoreClass(row['1pct'], '1pct', topTwo)}">${row['1pct']?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row['2pct'], '2pct', topTwo)}">${row['2pct']?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row['5pct'], '5pct', topTwo)}">${row['5pct']?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row['10pct'], '10pct', topTwo)}">${row['10pct']?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row['20pct'], '20pct', topTwo)}">${row['20pct']?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row['50pct'], '50pct', topTwo)}">${row['50pct']?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.avg, 'avg', topTwo)}">${row.avg?.toFixed(3) || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Render Zero-shot table
+        function renderZeroshotTable() {
+            const cols = ['dsads', 'mhealth', 'pamap2', 'avg'];
+            const topTwo = findTopTwo(zeroshotData, cols);
+            // Default sort by avg descending
+            const data = sortCol ? sortData(zeroshotData, sortCol) : [...zeroshotData].sort((a, b) => b.avg - a.avg);
+
+            return `
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-2">Zero-shot Transfer</h3>
+                    <p class="text-sm text-gray-600 mb-4">Leave-one-dataset-out evaluation with 6 common activity classes (Static, Walk, Run, Stairs, Jump, Cycle).</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('model')">Model</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('dsads')">DSADS</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('mhealth')">MHEALTH</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('pamap2')">PAMAP2</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase" onclick="sortAndRender('avg')">Avg</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${data.map(row => `
+                            <tr>
+                                <td class="px-4 py-3">${renderModelCell(row.model)}${row.model === 'Supervised (target)' ? '<span class="text-xs text-gray-400 ml-1">(upper bound)</span>' : ''}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.dsads, 'dsads', topTwo)}">${row.dsads?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.mhealth, 'mhealth', topTwo)}">${row.mhealth?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.pamap2, 'pamap2', topTwo)}">${row.pamap2?.toFixed(3) || '-'}</td>
+                                <td class="px-4 py-3 ${scoreClass(row.avg, 'avg', topTwo)}">${row.avg?.toFixed(3) || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Render current tab
+        function renderCurrentTab() {
+            const container = document.getElementById('tab-content');
+            switch (currentTab) {
+                case 'allmetrics':
+                    container.innerHTML = renderAllMetricsTable();
+                    break;
+                case 'overall':
+                    container.innerHTML = renderOverallTable();
+                    break;
+                case 'domain':
+                    container.innerHTML = renderDomainTable();
+                    break;
+                case 'position':
+                    container.innerHTML = renderPositionTable();
+                    break;
+                case 'fewshot':
+                    container.innerHTML = renderFewshotTable();
+                    break;
+                case 'zeroshot':
+                    container.innerHTML = renderZeroshotTable();
+                    break;
+            }
+        }
+
+        // Sort and re-render
+        function sortAndRender(col) {
+            sortCol = col;
+            renderCurrentTab();
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('tab-active');
+                    b.classList.add('text-gray-500');
+                });
+                btn.classList.add('tab-active');
+                btn.classList.remove('text-gray-500');
+                currentTab = btn.dataset.tab;
+                sortCol = null;
+                sortDir = 'desc';
+                renderCurrentTab();
+            });
+        });
+
+        // Initialize
+        loadAllData();
+    </script>
+</body>
+</html>

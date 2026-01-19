@@ -1,0 +1,708 @@
+# Dataset preprocessing configuration
+
+# Global settings
+global:
+  raw_data_path: har-datasets/data/raw
+  processed_data_path: har-datasets/data/processed
+  seed: 42
+  window_size: 150        # 5 seconds @ 30Hz
+  stride: 90              # 3 seconds @ 30Hz (40% overlap) - v1.0 compatible
+
+# Dataset-specific settings
+datasets:
+  # DSADS (Daily and Sports Activities Dataset)
+  dsads:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 25Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Normalization method: 'standardize', 'minmax', 'normalize'
+    normalize_method: standardize
+
+    # Data split ratios
+    train_ratio: 0.7
+    val_ratio: 0.15
+    test_ratio: 0.15
+
+    # Dataset information (for reference)
+    num_activities: 19
+    num_subjects: 8
+    num_channels: 45
+    original_sampling_rate: 25  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  # MHEALTH (Mobile Health) Dataset
+  mhealth:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 50Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Normalization method: 'standardize', 'minmax', 'normalize'
+    normalize_method: standardize
+
+    # Data split ratios
+    train_ratio: 0.7
+    val_ratio: 0.15
+    test_ratio: 0.15
+
+    # Dataset information (for reference)
+    num_activities: 12
+    num_subjects: 10
+    num_channels: 23
+    original_sampling_rate: 50  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  # OpenPack (Logistics Packaging Operations) Dataset
+  openpack:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (originally 30Hz, no resampling needed)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Data split ratios
+    train_ratio: 0.7
+    val_ratio: 0.15
+    test_ratio: 0.15
+
+    # Dataset information (for reference)
+    num_activities: 10
+    num_subjects: 10
+    num_channels: 40  # 4 IMU sensors × 10 channels (ACC:3 + GYRO:3 + QUAT:4)
+    original_sampling_rate: 30  # Hz
+    # No resampling needed
+
+  # NHANES PAX-G/PAX-H Dataset
+  nhanes:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Processing parameters
+    window_size: 5        # Window size (seconds)
+    sampling_rate: 80     # Sampling rate (Hz) - original sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 80Hz)
+    std_threshold: 0.02   # Standard deviation threshold for activity detection
+
+    # User ID management
+    start_id: 62161       # Start user ID (PAX-G)
+    end_id: 83731         # End user ID (all users including PAX-H: ~14693 people)
+    # PAX-G: 62161-73556 (2011-2012), PAX-H: 73557-83731 (2013-2014)
+    discover_users: false  # User ID auto-discovery mode (recommended due to gaps in IDs)
+    discovery_batch_size: 100  # Batch size for discovery mode
+    batch_size: 100       # Processing batch size
+
+    # Parallel processing settings
+    parallel: false       # Process files sequentially one by one
+    workers: 4            # Number of parallel workers (only used when parallel is true)
+
+    # Download settings
+    max_retries: 3        # Maximum retry count
+    retry_delay: 5        # Retry interval (seconds)
+
+    # Dataset information (for reference)
+    num_channels: 3       # X, Y, Z acceleration
+    original_sampling_rate: 80  # Hz
+
+  # FORTHTRACE (FORTH-TRACE) Dataset
+  forthtrace:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 51.2Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 16
+    num_subjects: 15
+    num_sensors: 5
+    num_channels: 9       # 3 axes × 3 modalities (ACC, GYRO, MAG)
+    original_sampling_rate: 51.2  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  # HAR70+ (Human Activity Recognition for Older Adults) Dataset
+  har70plus:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 50Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 7     # Walking, Shuffling, Stairs Up/Down, Standing, Sitting, Lying
+    num_subjects: 18      # Older adults aged 70-95
+    num_sensors: 2        # LowerBack, RightThigh
+    num_channels: 6       # 2 sensors × 3-axis acceleration
+    original_sampling_rate: 50  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  # HARTH (Human Activity Recognition Trondheim) Dataset
+  harth:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 50Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 12    # Walking, Running, Shuffling, Stairs, Standing, Sitting, Lying, Cycling
+    num_subjects: 22      # Activity recordings in free-living environment
+    num_sensors: 2        # LowerBack, RightThigh
+    num_channels: 6       # 2 sensors × 3-axis acceleration
+    original_sampling_rate: 50  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  realworld:
+    raw_data_path: har-datasets/data/raw
+    target_sampling_rate: 30  # Hz (resampled from original 50Hz)
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 8     # 8 types of activities
+    num_subjects: 15      # 15 subjects
+    num_sensors: 7        # Chest, Forearm, Head, Shin, Thigh, UpperArm, Waist
+    num_channels: 63      # 7 sensors × 9 channels (ACC:3 + GYRO:3 + MAG:3)
+    original_sampling_rate: 50  # Hz (original data)
+  # LARa (Logistic Activity Recognition) Dataset
+  lara:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 8     # Logistics warehouse work activities
+    num_subjects: 8       # S07-S14
+    num_sensors: 5        # LeftArm, LeftLeg, Neck, RightArm, RightLeg
+    num_channels: 30      # 5 sensors × (3-axis ACC + 3-axis GYRO)
+    original_sampling_rate: 100  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  # REALDISP (REAListic sensor DISPlacement) Activity Recognition Dataset
+  realdisp:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from estimated 50Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 33    # 33 types of fitness and daily activities
+    num_subjects: 17      # 17 subjects
+    num_sensors: 9        # 9 body locations (both arms/legs, back)
+    num_channels: 117     # 9 sensors × 13 channels (ACC:3 + GYRO:3 + MAG:3 + QUAT:4)
+    original_sampling_rate: 50  # Hz (estimated from data)
+    # sampling_rate is resampled to 30Hz
+
+  # PAMAP2 (Physical Activity Monitoring) Dataset
+  pamap2:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 12    # lying, sitting, standing, walking, running, cycling, Nordic walking, stairs, vacuum cleaning, ironing, rope jumping
+    num_subjects: 9       # Subject IDs: 101-109
+    num_sensors: 3        # hand, chest, ankle (IMU sensors)
+    num_channels: 27      # 3 sensors × 9 channels (ACC:3 + GYRO:3 + MAG:3 per sensor)
+    original_sampling_rate: 100  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  # MEx (Multi-modal Exercise) Dataset
+  mex:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 7     # 7 types of physiotherapy exercises (Knee-rolling, Bridging, Pelvic tilt, The Clam, Repeated Extension in Lying, Prone punches, Superman)
+    num_subjects: 30      # 30 subjects
+    num_sensors: 2        # Wrist, Thigh
+    num_channels: 6       # 2 sensors × 3-axis acceleration
+    original_sampling_rate: 100  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+  # OPPORTUNITY (OPPORTUNITY Activity Recognition) Dataset
+  opportunity:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (original data is also 30Hz, no resampling needed)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Scenarios to process (multiple can be specified)
+    scenarios: ['ideal']  # Choose from: ideal, self, mutual
+
+    # Dataset information (for reference)
+    num_activities: 17    # Mid-level gestures (Open/Close doors, drawers, etc.)
+    num_subjects: 4       # S1-S4
+    num_sensors: 7        # 7 IMUs (BACK, RUA, RLA, LUA, LLA, L_SHOE, R_SHOE)
+    num_channels: 91      # All body-worn sensors (IMU 7×13ch)
+    original_sampling_rate: 30  # Hz (original data)
+    # No resampling needed
+
+  hhar:
+    raw_data_path: har-datasets/data/raw
+    target_sampling_rate: 30  # Hz (resampled from device-specific original rates)
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+    max_gap_sec: 1.5      # Maximum gap for segment splitting
+    min_segment_sec: 0.9833333333  # Minimum segment length (~59 samples)
+
+    # Dataset information (for reference)
+    num_activities: 6     # Bike, Sit, Stand, Walk, StairsUp, StairsDown
+    num_subjects: 9       # Different users
+    num_devices: 12       # nexus4_1/2, s3_1/2, s3mini_1/2, samsungold_1/2, gear_1/2, lgwatch_1/2
+    num_channels: 6       # ACC:3 + GYRO:3
+    original_sampling_rate: null  # Varies by device (50-200Hz)
+
+  wisdm:
+    raw_data_path: har-datasets/data/raw
+    target_sampling_rate: 30  # Hz (resampled from original 20Hz)
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 18    # Walking, Jogging, Stairs, Sitting, Standing, Typing, BrushingTeeth, etc.
+    num_subjects: 51      # 51 subjects
+    num_sensors: 2        # Phone, Watch
+    num_channels: 12      # 2 sensors × (ACC:3 + GYRO:3)
+    original_sampling_rate: 20  # Hz (original data)
+
+  # WARD (Wearable Action Recognition Database) Dataset
+  ward:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 20Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 13    # Stand, Sit, Lie, Walk Forward, Walk Left/Right-Circle, Turn Left/Right, Go Up/Downstairs, Jog, Jump, Push Wheelchair
+    num_subjects: 20      # 20 subjects
+    num_sensors: 5        # LeftArm, RightArm, Waist, LeftAnkle, RightAnkle
+    num_channels: 25      # 5 sensors × (ACC:3 + GYRO:2)
+    original_sampling_rate: 20  # Hz (original data)
+    # sampling_rate is resampled to 30Hz
+
+
+  # CAPTURE-24 (Large-scale daily living HAR) Dataset
+  capture24:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Label schema
+    label_schema: 'Walmsley2020'  # or 'WillettsSpecific2018'
+
+    # Subsetting (optional: save memory/time)
+    max_participants: null  # null = all 151 participants, or specify number (e.g., 50)
+
+    # Dataset information (for reference)
+    num_participants: 151  # Number of participants
+    num_sensors: 1         # Wrist only
+    num_channels: 3        # 3-axis acceleration
+    original_sampling_rate: 100  # Hz (Axivity AX3)
+    # sampling_rate is resampled to 30Hz
+    # Labels: 200+ activities → aggregated using Walmsley2020 or WillettsSpecific2018 schema
+    # Note: Large data size (6.5GB zip, ~30GB extracted)
+
+  # IMSB (IM-SportingBehaviors) Dataset
+  imsb:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 20Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 6     # Badminton, Basketball, Cycling, Football, Skipping, TableTennis
+    num_subjects: 20      # Professional + amateur athletes (20-30 years old)
+    num_sensors: 2        # Wrist, Neck (Thigh excluded due to high missing values)
+    num_channels: 6       # 2 sensors × 3-axis acceleration
+    original_sampling_rate: 20  # Hz (estimated: 1000samples/50s)
+    # sampling_rate is resampled to 30Hz
+    # Note: Thigh sensor excluded due to 30% missing values
+
+  # MotionSense Dataset
+  motionsense:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 50Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 6     # Downstairs, Upstairs, Walking, Jogging, Standing, Sitting
+    num_subjects: 24      # Diverse age, gender, weight, height
+    num_sensors: 1        # Pocket (iPhone 6s in front pocket)
+    num_channels: 12      # ATT(3) + GRA(3) + ROT(3) + ACC(3)
+    original_sampling_rate: 50  # Hz
+    # sampling_rate is resampled to 30Hz
+    # Sensor: DeviceMotion (attitude + gravity + rotationRate + userAcceleration)
+    # Note: Manual download from GitHub required
+
+  # IM-WSHA (IM-Wearable Smart Home Activities) Dataset
+  imwsha:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from estimated 50Hz)
+    original_sampling_rate: 50  # Hz (estimated: variable sampling rate)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 11    # Using Computer, Phone Conversation, Vacuum Cleaning, Reading Book, Watching TV, Ironing, Walking, Exercise, Cooking, Drinking, Brushing Hair
+    num_subjects: 10      # 5 females, 5 males (19-60 years, 55-85 kg)
+    num_sensors: 3        # Wrist, Chest, Thigh (MPU-9250 IMU)
+    num_channels: 27      # 3 sensors × 9 axes (ACC + GYRO + MAG)
+    # sampling_rate is resampled to 30Hz
+    # Note: 220 sequences, variable length 45-60 seconds
+
+  # SBRHAPT (Smartphone-Based Recognition of Human Activities and Postural Transitions) Dataset
+  sbrhapt:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 50Hz)
+    original_sampling_rate: 50  # Hz
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 12    # 6 basic + 6 postural transitions
+    num_subjects: 30      # 19-48 years old
+    num_sensors: 1        # Waist (Samsung Galaxy S II)
+    num_channels: 6       # ACC(3) + GYRO(3)
+    # sampling_rate is resampled to 30Hz
+    # Sensor: Waist-worn smartphone (3-axis accelerometer + 3-axis gyroscope)
+    # Note: Original data in m/s^2 units, converted to G units with scale_factor=9.8
+
+  # CHAD (Complex Human Activities Dataset)
+  chad:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from estimated 50Hz)
+    original_sampling_rate: 50  # Hz (estimated from paper)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 13    # Walk, Stand, Jog, Sit, Bike, Upstairs, Downstairs, Type, Write, Coffee, Talk, Smoke, Eat
+    num_sensors: 2        # Pocket, Wrist (smartphone placement)
+    num_channels: 12      # ACC(3) + Linear ACC(3) + GYRO(3) + MAG(3)
+    # sampling_rate is resampled to 30Hz
+    # Sensor: Smartphone (pocket and wrist placement)
+    # Modality: ACC + Linear Acceleration + GYRO + MAG
+
+  # UCA-EHAR (Université Côte d'Azur - Embedded Human Activity Recognition) Dataset
+  ucaehar:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 25Hz)
+    original_sampling_rate: 25  # Hz (estimated from timestamps)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 12    # Walking, Running, Standing, Sitting, Lying, Drinking, Stairs Up/Down, Postural Transitions
+    num_subjects: 20      # T1-T21 (T11 missing)
+    num_sensors: 1        # SmartGlasses
+    num_channels: 7       # ACC(3) + GYRO(3) + BAR(1)
+    # Acceleration unit: m/s² (converted to G units with scale_factor=9.8)
+    # Note: Smart glasses worn, filename pattern {ACTIVITY}_T{SUBJECT}.csv
+
+  # Daphnet Freezing of Gait Dataset
+  dog:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 64Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 2     # No Freeze, Freeze (non-experiment converted to -1)
+    num_subjects: 10      # Parkinson's disease patients
+    num_sensors: 3        # Ankle, Thigh, Trunk
+    num_channels: 9       # 3 sensors × 3-axis acceleration
+    original_sampling_rate: 64  # Hz (original data)
+    # Acceleration unit: mg (milli-G) -> converted to G units with scale_factor=1000
+    # Note: Dataset for Freezing of Gait detection
+
+  # VTT-ConIot (Construction Worker HAR) Dataset
+  vtt_coniot:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 16    # Construction work motions (painting, cleaning, stairs, carrying, etc.)
+    num_subjects: 13      # 13 subjects
+    num_sensors: 3        # Hip, Back, UpperArm
+    num_channels: 27      # 3 sensors × 9 axes (ACC + GYRO + MAG)
+    original_sampling_rate: 100  # Hz (original data)
+    # Acceleration unit: half-G -> converted to G units with scale_factor=0.5
+    # License: CC BY 4.0
+    # Source: https://zenodo.org/records/4683703
+
+  # PAAL (ADL Accelerometry Dataset)
+  paal:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 32Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 24    # 24 ADL activities
+    num_subjects: 52      # 52 subjects (26 male, 26 female, age 18-77)
+    num_sensors: 1        # Phone (dominant hand)
+    num_channels: 3       # 3-axis accelerometer
+    original_sampling_rate: 32  # Hz (Empatica E4)
+    # Acceleration unit: 8-bit resolution (0.015g per unit) -> converted to G units
+    # Source: https://zenodo.org/records/5785955
+
+  # KDDI Kitchen Smartwatch Dataset (Left arm)
+  kddi_kitchen_left:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 64Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 30            # 1 second @ 30Hz
+
+    # Dataset information (for reference)
+    num_activities: 24    # 24 cooking activity classes + Undefined
+    num_subjects: 10      # 10 subjects
+    num_sensors: 1        # Left wrist (Sony SmartWatch 3)
+    num_channels: 3       # 3-axis accelerometer
+    original_sampling_rate: 64  # Hz
+    # Acceleration unit: m/s² -> converted to G units with scale_factor=9.8
+    # Source: GitHub (kitchen_smartwatch_dataset)
+
+  # KDDI Kitchen Smartwatch Dataset (Right arm)
+  kddi_kitchen_right:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 64Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 30            # 1 second @ 30Hz
+
+    # Dataset information (for reference)
+    num_activities: 24    # 24 cooking activity classes + Undefined
+    num_subjects: 10      # 10 subjects
+    num_sensors: 1        # Right wrist (Sony SmartWatch 3)
+    num_channels: 3       # 3-axis accelerometer
+    original_sampling_rate: 64  # Hz
+    # Acceleration unit: m/s² -> converted to G units with scale_factor=9.8
+    # Source: GitHub (kitchen_smartwatch_dataset)
+
+  # TMD (Transportation Mode Detection) Dataset
+  tmd:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from various original rates)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 5     # Still, Walk, Run, Bike, Car (aggregated)
+    num_subjects: 20      # Variable subjects
+    num_sensors: 1        # Pocket
+    num_channels: 6       # ACC(3) + GYRO(3)
+    # Source: TMD dataset from SHL challenge
+
+  # SelfBack Dataset
+  selfback:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 9     # Lying, Sitting, Standing, Walking, Running, Cycling, etc.
+    num_subjects: 33      # 33 subjects
+    num_sensors: 1        # Watch (Microsoft Band 2)
+    num_channels: 6       # ACC(3) + GYRO(3)
+    original_sampling_rate: 100  # Hz
+
+  # USC-HAD (USC Human Activity Dataset)
+  uschad:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 12    # Walking Forward/Left/Right/Upstairs/Downstairs, Running, Jumping, Sitting, Standing, Sleeping, Elevator Up/Down
+    num_subjects: 14      # 14 subjects
+    num_sensors: 1        # Smartphone (waist-mounted)
+    num_channels: 6       # ACC(3) + GYRO(3)
+    original_sampling_rate: 100  # Hz (MotionNode)
+
+  # Exoskeletons Dataset
+  exoskeletons:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 100Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 4     # Walking, Stairs Up, Stairs Down, Standing
+    num_subjects: 12      # 12 subjects with exoskeletons
+    num_sensors: 3        # Chest, RightLeg, LeftLeg
+    num_channels: 15      # 3 sensors × 5 axes (ACC(3) + GYRO(2))
+    original_sampling_rate: 100  # Hz
+
+  # ADLRD (ADL Recognition Dataset) - UCI Dataset 283
+  adlrd:
+    # Data path
+    raw_data_path: har-datasets/data/raw
+
+    # Sampling rate
+    target_sampling_rate: 30  # Hz (resampled from original 32Hz)
+
+    # Window parameters
+    window_size: 150      # 5 seconds @ 30Hz
+    stride: 90            # 3 seconds @ 30Hz (40% overlap)
+
+    # Dataset information (for reference)
+    num_activities: 14    # Brush Teeth, Climb Stairs, Comb Hair, etc.
+    num_subjects: 16      # 16 subjects
+    num_sensors: 1        # RightWrist
+    num_channels: 3       # 3-axis accelerometer
+    original_sampling_rate: 32  # Hz
+    # Data range: 6-bit coded values (0-63 = -1.5g to +1.5g)
+
+# Logging settings
+logging:
+  level: INFO           # DEBUG, INFO, WARNING, ERROR
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  save_to_file: true
+  log_dir: logs/preprocessing
