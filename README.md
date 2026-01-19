@@ -2,6 +2,8 @@
 
 A comprehensive benchmark for evaluating foundation models in sensor-based Human Activity Recognition (HAR).
 
+**Leaderboard**: https://litchi7777.github.io/harbench/
+
 ## Requirements
 
 - Python 3.8+
