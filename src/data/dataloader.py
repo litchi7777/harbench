@@ -33,7 +33,7 @@ USABLE_CLASSES = {
     # DSADS: All 19 classes used
     "dsads": None,
 
-    # FORTHTRACE: All 7 classes used
+    # FORTHTRACE: 11 classes used
     "forthtrace": None,
 
     # HARTH: 12 -> 10 classes
