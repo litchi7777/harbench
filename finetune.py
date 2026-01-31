@@ -254,6 +254,8 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def train_epoch(model, loader, criterion, optimizer, device, model_type="resnet", max_iterations=None):
@@ -670,7 +672,8 @@ def run_zeroshot(args):
 
     # Create output directory and log file (same as finetune)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = os.path.join(args.output_dir, f"{timestamp}_{args.model}_zeroshot")
+    target_suffix = f"_{args.zeroshot}" if args.zeroshot != "all" else ""
+    output_dir = os.path.join(args.output_dir, f"{timestamp}_{args.model}_zeroshot{target_suffix}")
     os.makedirs(output_dir, exist_ok=True)
 
     log_path = os.path.join(output_dir, "log.txt")
@@ -681,10 +684,14 @@ def run_zeroshot(args):
         log_file.write(msg + "\n")
         log_file.flush()
 
+    # Multi-seed configuration
+    seeds = [args.seed, args.seed + 1, args.seed + 2, args.seed + 3]
+    num_seeds = len(seeds)
+
     log(f"Using device: {device}")
     log(f"Model: {args.model} ({model_config['description']})")
     log(f"Weights: {weights_path or 'scratch (random init)'}")
-    log(f"Zero-shot LODO Evaluation")
+    log(f"Zero-shot LODO Evaluation ({num_seeds}-seed average: {seeds})")
 
     results = {}
 
@@ -723,150 +730,165 @@ def run_zeroshot(args):
         X_all = np.concatenate(X_train_list, axis=0)
         Y_all = np.concatenate(Y_train_list, axis=0)
 
-        # Split into train/val (80/20)
-        from sklearn.model_selection import train_test_split
-        X_train, X_val, Y_train, Y_val = train_test_split(
-            X_all, Y_all, test_size=0.2, random_state=args.seed, stratify=Y_all
-        )
+        seed_f1s = []
+        seed_accs = []
 
-        log(f"  Train: {X_train.shape[0]} samples, Val: {X_val.shape[0]} samples")
-        log(f"  Target test: {X_target.shape[0]} samples")
+        for seed_idx, seed in enumerate(seeds):
+            log(f"\n  --- Seed {seed} ({seed_idx+1}/{num_seeds}) ---")
+            set_seed(seed)
 
-        # Create datasets
-        train_dataset = HARDataset(X_train, Y_train)
-        val_dataset = HARDataset(X_val, Y_val)
-        test_dataset = HARDataset(X_target, Y_target)
-
-        # WeightedRandomSampler for class-balanced training
-        from collections import Counter
-        class_count = Counter(Y_train)
-        class_weights = {cls: 1.0 / count for cls, count in class_count.items()}
-        sample_weights = np.array([class_weights[y] for y in Y_train])
-        sample_weights = torch.from_numpy(sample_weights).float()
-
-        # samples_per_epoch: min(train_size, max_samples) or train_size if None
-        if args.max_samples_per_epoch is not None:
-            samples_per_epoch = min(len(Y_train), args.max_samples_per_epoch)
-        else:
-            samples_per_epoch = len(Y_train)
-        sampler = WeightedRandomSampler(
-            weights=sample_weights,
-            num_samples=samples_per_epoch,
-            replacement=True
-        )
-
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=0)
-        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
-
-        # Create model
-        num_sensors = len(ZEROSHOT_SENSORS[target])
-        in_channels = num_sensors * 3
-        n_classes = 6  # Zero-shot uses 6 common classes
-
-        # Special handling for foundation models (same as train_model)
-        if model_type == "patchtst":
-            config = PatchTSTConfig(
-                num_input_channels=in_channels,
-                num_targets=n_classes,
-                context_length=150,
-                patch_length=16,
-                stride=16,
-                use_cls_token=True,
+            # Split into train/val (80/20)
+            from sklearn.model_selection import train_test_split
+            X_train, X_val, Y_train, Y_val = train_test_split(
+                X_all, Y_all, test_size=0.2, random_state=seed, stratify=Y_all
             )
-            model = PatchTSTForClassification(config=config)
-            model = model.to(device)
-        elif model_type == "moment":
-            model = MOMENTPipeline.from_pretrained(
-                "AutonLab/MOMENT-1-small",
-                model_kwargs={
-                    'task_name': 'classification',
-                    'n_channels': in_channels,
-                    'num_class': n_classes,
-                }
-            )
-            model.init()
-            model = model.to(device)
-        else:
-            # Standard backbone + classifier pattern
-            backbone = create_backbone(model_type, weights_path, num_sensors, in_channels, device)
-            model = TwoLayerClassifier(backbone, n_classes=n_classes)
-            model = model.to(device)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
-        criterion = nn.CrossEntropyLoss()
+            log(f"  Train: {X_train.shape[0]} samples, Val: {X_val.shape[0]} samples")
+            log(f"  Target test: {X_target.shape[0]} samples")
 
-        best_f1 = 0.0
-        best_state = None
-        patience_counter = 0
-        n_batches = len(train_loader)
+            # Create datasets
+            train_dataset = HARDataset(X_train, Y_train)
+            val_dataset = HARDataset(X_val, Y_val)
+            test_dataset = HARDataset(X_target, Y_target)
 
-        for epoch in range(args.epochs):
-            import time
-            start_time = time.time()
+            # WeightedRandomSampler for class-balanced training
+            from collections import Counter
+            class_count = Counter(Y_train)
+            class_weights = {cls: 1.0 / count for cls, count in class_count.items()}
+            sample_weights = np.array([class_weights[y] for y in Y_train])
+            sample_weights = torch.from_numpy(sample_weights).float()
 
-            # Train
-            model.train()
-            total_loss = 0.0
-            for inputs, labels in train_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
-                optimizer.zero_grad()
-
-                # Special handling for foundation models
-                if model_type == "patchtst":
-                    inputs_t = inputs.permute(0, 2, 1)
-                    outputs = model(inputs_t).prediction_logits
-                elif model_type == "moment":
-                    outputs = model.forward(x_enc=inputs).logits
-                else:
-                    outputs = model(inputs)
-
-                loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-            train_loss = total_loss / len(train_loader)
-
-            # Evaluate on validation (for model selection)
-            val_loss, val_f1, val_acc = evaluate(model, val_loader, criterion, device, model_type)
-
-            epoch_time = time.time() - start_time
-            is_best = val_f1 > best_f1
-            best_marker = " *" if is_best else ""
-
-            log(f"  Epoch {epoch+1}/{args.epochs}: 100%|{'█'*10}| {n_batches}/{n_batches} [{epoch_time:.2f}s] train_loss={train_loss:.4f} val_loss={val_loss:.4f}{best_marker}")
-
-            if is_best:
-                best_f1 = val_f1
-                best_state = model.state_dict().copy()
-                patience_counter = 0
+            # samples_per_epoch: min(train_size, max_samples) or train_size if None
+            if args.max_samples_per_epoch is not None:
+                samples_per_epoch = min(len(Y_train), args.max_samples_per_epoch)
             else:
-                patience_counter += 1
+                samples_per_epoch = len(Y_train)
+            sampler = WeightedRandomSampler(
+                weights=sample_weights,
+                num_samples=samples_per_epoch,
+                replacement=True
+            )
 
-            if patience_counter >= args.patience:
-                log(f"  Early stopping at epoch {epoch+1}")
-                break
+            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=sampler, num_workers=0)
+            val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
+            test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
 
-            scheduler.step()
+            # Create model
+            num_sensors = len(ZEROSHOT_SENSORS[target])
+            in_channels = num_sensors * 3
+            n_classes = 6  # Zero-shot uses 6 common classes
 
-        if best_state:
-            model.load_state_dict(best_state)
-        # Final evaluation on test (target dataset)
-        _, f1, acc = evaluate(model, test_loader, criterion, device, model_type)
+            # Special handling for foundation models (same as train_model)
+            if model_type == "patchtst":
+                config = PatchTSTConfig(
+                    num_input_channels=in_channels,
+                    num_targets=n_classes,
+                    context_length=150,
+                    patch_length=16,
+                    stride=16,
+                    use_cls_token=True,
+                )
+                model = PatchTSTForClassification(config=config)
+                model = model.to(device)
+            elif model_type == "moment":
+                model = MOMENTPipeline.from_pretrained(
+                    "AutonLab/MOMENT-1-small",
+                    model_kwargs={
+                        'task_name': 'classification',
+                        'n_channels': in_channels,
+                        'num_class': n_classes,
+                    }
+                )
+                model.init()
+                model = model.to(device)
+            else:
+                # Standard backbone + classifier pattern
+                backbone = create_backbone(model_type, weights_path, num_sensors, in_channels, device)
+                model = TwoLayerClassifier(backbone, n_classes=n_classes)
+                model = model.to(device)
 
-        log(f"Target {target} Result: F1={f1:.4f}, Acc={acc:.4f}")
-        results[target] = {"f1": float(f1), "acc": float(acc)}
+            optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-5)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+            criterion = nn.CrossEntropyLoss()
+
+            best_f1 = 0.0
+            best_state = None
+            patience_counter = 0
+            n_batches = len(train_loader)
+
+            for epoch in range(args.epochs):
+                import time
+                start_time = time.time()
+
+                # Train
+                model.train()
+                total_loss = 0.0
+                for inputs, labels in train_loader:
+                    inputs, labels = inputs.to(device), labels.to(device)
+                    optimizer.zero_grad()
+
+                    # Special handling for foundation models
+                    if model_type == "patchtst":
+                        inputs_t = inputs.permute(0, 2, 1)
+                        outputs = model(inputs_t).prediction_logits
+                    elif model_type == "moment":
+                        outputs = model.forward(x_enc=inputs).logits
+                    else:
+                        outputs = model(inputs)
+
+                    loss = criterion(outputs, labels)
+                    loss.backward()
+                    optimizer.step()
+                    total_loss += loss.item()
+                train_loss = total_loss / len(train_loader)
+
+                # Evaluate on validation (for model selection)
+                val_loss, val_f1, val_acc = evaluate(model, val_loader, criterion, device, model_type)
+
+                epoch_time = time.time() - start_time
+                is_best = val_f1 > best_f1
+                best_marker = " *" if is_best else ""
+
+                log(f"  Epoch {epoch+1}/{args.epochs}: 100%|{'█'*10}| {n_batches}/{n_batches} [{epoch_time:.2f}s] train_loss={train_loss:.4f} val_loss={val_loss:.4f}{best_marker}")
+
+                if is_best:
+                    best_f1 = val_f1
+                    best_state = model.state_dict().copy()
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+
+                if patience_counter >= args.patience:
+                    log(f"  Early stopping at epoch {epoch+1}")
+                    break
+
+                scheduler.step()
+
+            if best_state:
+                model.load_state_dict(best_state)
+            # Final evaluation on test (target dataset)
+            _, f1, acc = evaluate(model, test_loader, criterion, device, model_type)
+
+            log(f"  Seed {seed} Result: F1={f1:.4f}, Acc={acc:.4f}")
+            seed_f1s.append(f1)
+            seed_accs.append(acc)
+
+        # Average over seeds
+        mean_f1 = float(np.mean(seed_f1s))
+        mean_acc = float(np.mean(seed_accs))
+        std_f1 = float(np.std(seed_f1s))
+        log(f"Target {target} Result: F1={mean_f1:.4f} (±{std_f1:.4f}), Acc={mean_acc:.4f}")
+        results[target] = {"f1": mean_f1, "acc": mean_acc, "std_f1": std_f1, "seed_f1s": [float(f) for f in seed_f1s]}
 
     # Summary
     if results:
         mean_f1 = np.mean([r["f1"] for r in results.values()])
 
         log(f"\n{'='*60}")
-        log(f"Zero-shot Results Summary")
+        log(f"Zero-shot Results Summary ({num_seeds}-seed average)")
         log(f"{'='*60}")
         for dataset, r in results.items():
-            log(f"  {dataset}: F1={r['f1']:.4f}")
+            log(f"  {dataset}: F1={r['f1']:.4f} (±{r['std_f1']:.4f})")
         log(f"  Average: F1={mean_f1:.4f}")
 
         final_results = {
@@ -874,7 +896,7 @@ def run_zeroshot(args):
             "model": args.model,
             "model_type": model_type,
             "weights": weights_path,
-            "seed": args.seed,
+            "seeds": seeds,
             "dataset_results": results,
             "summary": {"mean_f1": float(mean_f1)},
             "timestamp": timestamp,
