@@ -208,8 +208,8 @@ class SelfBackPreprocessor(BasePreprocessor):
         if not w_dir.exists():
             raise FileNotFoundError(f"Wrist sensor directory not found: {w_dir}")
 
-        # Get subject ID list from first activity directory
-        first_activity = list(w_dir.iterdir())[0]
+        # Get subject ID list from first activity directory (skip hidden/metadata files)
+        first_activity = [d for d in w_dir.iterdir() if d.is_dir() and not d.name.startswith('.')][0]
         subject_files = [f for f in first_activity.glob("*.csv") if not f.name.startswith('._')]
         original_subject_ids = sorted([int(f.stem) for f in subject_files])
 

@@ -259,10 +259,10 @@ def run_jobs_parallel(jobs, num_gpus, parallel_per_gpu):
 
     total_workers = num_gpus * parallel_per_gpu
 
-    # Create GPU slot queue: each GPU has parallel_per_gpu slots
+    # Create GPU slot queue (round-robin: 0,1,2,3,0,1,2,3,...)
     gpu_queue = Queue()
-    for gpu_id in range(num_gpus):
-        for _ in range(parallel_per_gpu):
+    for _ in range(parallel_per_gpu):
+        for gpu_id in range(num_gpus):
             gpu_queue.put(gpu_id)
 
     results = {}
@@ -521,54 +521,82 @@ def aggregate_fewshot_results(jobs, results):
 # Zero-shot (runs separately - not parallelized)
 # =============================================================================
 
-def run_zeroshot(model, device, output_dir, weights=None, epochs=100, max_samples_per_epoch=None):
-    """Run zero-shot evaluation."""
-    cmd = [
-        sys.executable, "finetune.py",
-        "--model", model,
-        "--zeroshot",
-        "--device", device,
-        "--output_dir", output_dir,
-        "--epochs", str(epochs),
-    ]
-
-    if max_samples_per_epoch is not None:
-        cmd.extend(["--max_samples_per_epoch", str(max_samples_per_epoch)])
-    if weights:
-        cmd.extend(["--weights", weights])
-
-    try:
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
-
-        zeroshot_dir = os.path.join(output_dir, "zeroshot")
-        if os.path.exists(zeroshot_dir):
-            for run_dir in sorted(os.listdir(zeroshot_dir), reverse=True):
-                results_path = os.path.join(zeroshot_dir, run_dir, "results.json")
-                if os.path.exists(results_path):
-                    with open(results_path) as f:
-                        return json.load(f)
-        else:
-            print(f"  Warning: zeroshot_dir not found: {zeroshot_dir}")
-    except subprocess.CalledProcessError as e:
-        print(f"  Error: {e.stderr[:500] if e.stderr else 'Unknown'}")
-
-    return None
-
-
 def eval_zeroshot_performance(args):
-    """Evaluate Zero-shot Performance (LODO)."""
+    """Evaluate Zero-shot Performance (LODO) with parallel execution."""
+    from queue import Queue
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     print("\n" + "="*60)
     print("5. Zero-shot Performance (LODO)")
     print("="*60)
 
-    result = run_zeroshot(args.model, "cuda:0", args.output_dir, weights=args.weights,
-                          epochs=args.epochs, max_samples_per_epoch=args.max_samples_per_epoch)
+    zeroshot_targets = ["dsads", "mhealth", "pamap2"]
+    total_workers = args.num_gpus * args.parallel
 
-    if result and "dataset_results" in result:
-        for dataset, r in result["dataset_results"].items():
-            print(f"  {dataset}: F1={r['f1']:.4f}")
-        print(f"\n  Zero-shot Average: {result['summary']['mean_f1']:.4f}")
-        return result
+    # Create GPU slot queue (round-robin: 0,1,2,3,0,1,2,3,...)
+    gpu_queue = Queue()
+    for _ in range(args.parallel):
+        for gpu_id in range(args.num_gpus):
+            gpu_queue.put(gpu_id)
+
+    print(f"\nRunning {len(zeroshot_targets)} targets with {total_workers} workers ({args.num_gpus} GPUs x {args.parallel} parallel)")
+
+    def run_zeroshot_target(target):
+        gpu_id = gpu_queue.get()
+        try:
+            cmd = [
+                sys.executable, "finetune.py",
+                "--model", args.model,
+                "--zeroshot", target,
+                "--device", "cuda:0",
+                "--output_dir", args.output_dir,
+                "--epochs", str(args.epochs),
+            ]
+            if args.max_samples_per_epoch is not None:
+                cmd.extend(["--max_samples_per_epoch", str(args.max_samples_per_epoch)])
+            if args.weights:
+                cmd.extend(["--weights", args.weights])
+
+            env = os.environ.copy()
+            env["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, env=env)
+            return target, None
+        except subprocess.CalledProcessError as e:
+            return target, e.stderr[:500] if e.stderr else "Unknown error"
+        finally:
+            gpu_queue.put(gpu_id)
+
+    with ThreadPoolExecutor(max_workers=total_workers) as executor:
+        futures = {executor.submit(run_zeroshot_target, t): t for t in zeroshot_targets}
+        for future in as_completed(futures):
+            target, error = future.result()
+            if error:
+                print(f"  Error for {target}: {error}")
+            else:
+                print(f"  Completed: {target}")
+
+    # Collect results from all target directories
+    zeroshot_dir = os.path.join(args.output_dir, "zeroshot")
+    dataset_results = {}
+    if os.path.exists(zeroshot_dir):
+        for run_dir in sorted(os.listdir(zeroshot_dir)):
+            results_path = os.path.join(zeroshot_dir, run_dir, "results.json")
+            if os.path.exists(results_path):
+                with open(results_path) as f:
+                    run_result = json.load(f)
+                if "dataset_results" in run_result:
+                    dataset_results.update(run_result["dataset_results"])
+
+    if dataset_results:
+        for dataset, r in dataset_results.items():
+            f1_str = f"F1={r['f1']:.4f}"
+            if "std_f1" in r:
+                f1_str += f" (±{r['std_f1']:.4f})"
+            print(f"  {dataset}: {f1_str}")
+        mean_f1 = np.mean([r["f1"] for r in dataset_results.values()])
+        print(f"\n  Zero-shot Average: {mean_f1:.4f}")
+        return {"dataset_results": dataset_results, "summary": {"mean_f1": float(mean_f1)}}
 
     print("  Failed")
     return {}
