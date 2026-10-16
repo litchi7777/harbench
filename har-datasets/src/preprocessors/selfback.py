@@ -243,17 +243,8 @@ class SelfBackPreprocessor(BasePreprocessor):
                     # Load thigh sensor data
                     t_data = pd.read_csv(t_file)
 
-                    # Extract only x,y,z columns excluding timestamp
-                    w_values = w_data[['x', 'y', 'z']].values
-                    t_values = t_data[['x', 'y', 'z']].values
-
-                    # Align lengths (use shorter length)
-                    min_len = min(len(w_values), len(t_values))
-                    w_values = w_values[:min_len]
-                    t_values = t_values[:min_len]
-
                     # Merge: [wrist_x, wrist_y, wrist_z, thigh_x, thigh_y, thigh_z]
-                    merged_data = np.hstack([w_values, t_values])  # (N, 6)
+                    merged_data = self._on_common_grid([w_data, t_data])  # (N, 6)
 
                     # Generate labels
                     labels = np.full(len(merged_data), activity_id)
@@ -285,6 +276,28 @@ class SelfBackPreprocessor(BasePreprocessor):
 
         logger.info(f"Total users loaded: {len(result)}")
         return result
+
+    def _on_common_grid(self, frames: list) -> np.ndarray:
+        """
+        Interpolate the sensors onto one grid at original_sampling_rate
+
+        Wrist and thigh files of a recording cover the same span, but each
+        sensor runs at its own rate, between about 97 and 103 Hz, so pairing
+        rows by index lets them drift apart by up to 15 s. The grid runs over
+        the span both files cover, by their timestamps, at the rate the later
+        resampling to 30 Hz assumes.
+        """
+        clocks = [
+            pd.to_datetime(df['time'], format='ISO8601').to_numpy().astype('int64') / 1e6
+            for df in frames
+        ]
+        start = max(clock[0] for clock in clocks)
+        end = min(clock[-1] for clock in clocks)
+        grid = np.arange(start, end, 1000 / self.original_sampling_rate)
+        return np.hstack([
+            np.stack([np.interp(grid, clock, df[axis].to_numpy(float)) for axis in ['x', 'y', 'z']], axis=1)
+            for clock, df in zip(clocks, frames)
+        ]).astype(np.float32)
 
     def clean_data(self, data: Dict[int, list]) -> Dict[int, list]:
         """
