@@ -37,20 +37,20 @@ OPPORTUNITY_URL = "https://archive.ics.uci.edu/static/public/226/opportunity+act
 
 # Select 113 sensor channels (based on DeepConvLSTM implementation)
 # Column 0 of original data is timestamp, columns 1-133 are body-worn sensors, columns 134-242 are object/ambient sensors
-# Column 243 is mid-level gesture label, column 244 is locomotion label
+# Column 243 is the locomotion label, column 249 the mid-level gesture label
 def select_columns_opp(data):
     """
-    Select 113 columns used in OPPORTUNITY challenge
+    Select 113 sensor channels used in OPPORTUNITY challenge, plus time and the two label columns
 
     - Columns 46-49, 59-62, 72-75, 85-88, 98-101: IMU Quaternions (removed)
     - Columns 134-242: Object/ambient sensors (removed)
     - Columns 244-248: Others (removed)
 
     Args:
-        data: Original data matrix (samples, 249)
+        data: Original data matrix (samples, 250)
 
     Returns:
-        Selected 113 columns of sensor data (samples, 113)
+        Time, the 113 sensor channels and the locomotion and gesture labels (samples, 116)
     """
     features_delete = np.arange(46, 50)
     features_delete = np.concatenate([features_delete, np.arange(59, 63)])
@@ -62,73 +62,71 @@ def select_columns_opp(data):
     return np.delete(data, features_delete, 1)
 
 
-# Sensor channel group definitions (113 channels)
-# Each IMU has 17 channels - 4 channels (QUAT) = 13 channels
-# Column numbers are 0-indexed after selection
+# Sensor channel groups, 0-indexed into the 113 sensor channels
+# 0-35 are 12 standalone accelerometers and are not used here.
+# The five jacket IMUs have 9 channels each once the quaternions are removed.
+# The shoes have 16 channels each and no magnetometer; we take their
+# body-frame acceleration and angular velocity.
 SENSOR_GROUPS = {
     'BACK': {
-        'channels': list(range(0, 13)),  # 13 channels
+        'channels': list(range(36, 45)),  # 9 channels
         'modalities': {
-            'ACC': list(range(0, 3)),    # Accelerometer X, Y, Z
-            'GYRO': list(range(3, 6)),   # Gyroscope X, Y, Z
-            'MAG': list(range(6, 9)),    # Magnetometer X, Y, Z
+            'ACC': list(range(36, 39)),    # Accelerometer X, Y, Z
+            'GYRO': list(range(39, 42)),   # Gyroscope X, Y, Z
+            'MAG': list(range(42, 45)),    # Magnetometer X, Y, Z
         }
     },
     'RUA': {  # Right Upper Arm
-        'channels': list(range(13, 26)),
+        'channels': list(range(45, 54)),
         'modalities': {
-            'ACC': list(range(13, 16)),
-            'GYRO': list(range(16, 19)),
-            'MAG': list(range(19, 22)),
+            'ACC': list(range(45, 48)),
+            'GYRO': list(range(48, 51)),
+            'MAG': list(range(51, 54)),
         }
     },
     'RLA': {  # Right Lower Arm
-        'channels': list(range(26, 39)),
+        'channels': list(range(54, 63)),
         'modalities': {
-            'ACC': list(range(26, 29)),
-            'GYRO': list(range(29, 32)),
-            'MAG': list(range(32, 35)),
+            'ACC': list(range(54, 57)),
+            'GYRO': list(range(57, 60)),
+            'MAG': list(range(60, 63)),
         }
     },
     'LUA': {  # Left Upper Arm
-        'channels': list(range(39, 52)),
+        'channels': list(range(63, 72)),
         'modalities': {
-            'ACC': list(range(39, 42)),
-            'GYRO': list(range(42, 45)),
-            'MAG': list(range(45, 48)),
+            'ACC': list(range(63, 66)),
+            'GYRO': list(range(66, 69)),
+            'MAG': list(range(69, 72)),
         }
     },
     'LLA': {  # Left Lower Arm
-        'channels': list(range(52, 65)),
+        'channels': list(range(72, 81)),
         'modalities': {
-            'ACC': list(range(52, 55)),
-            'GYRO': list(range(55, 58)),
-            'MAG': list(range(58, 61)),
+            'ACC': list(range(72, 75)),
+            'GYRO': list(range(75, 78)),
+            'MAG': list(range(78, 81)),
         }
     },
     'L_SHOE': {  # Left Shoe
-        'channels': list(range(65, 78)),
+        'channels': list(range(81, 97)),  # 16 channels
         'modalities': {
-            'ACC': list(range(65, 68)),
-            'GYRO': list(range(68, 71)),
-            'MAG': list(range(71, 74)),
+            'ACC': list(range(87, 90)),    # Body_Ax, Body_Ay, Body_Az
+            'GYRO': list(range(90, 93)),   # AngVelBodyFrameX, Y, Z
         }
     },
     'R_SHOE': {  # Right Shoe
-        'channels': list(range(78, 91)),
+        'channels': list(range(97, 113)),
         'modalities': {
-            'ACC': list(range(78, 81)),
-            'GYRO': list(range(81, 84)),
-            'MAG': list(range(84, 87)),
+            'ACC': list(range(103, 106)),
+            'GYRO': list(range(106, 109)),
         }
     },
-    # Note: Remaining 22 channels (91-112) are additional accelerometer sensors
-    # (HIP, RKN, LKN, etc.) but excluded for consistency with other datasets
     # Each sensor group should have 3 channels (X, Y, Z) per modality
 }
 
 # Label column (mid-level gestures)
-LABEL_COLUMN = 243  # Column number in original data
+LABEL_COLUMN = 249  # Column number in original data
 
 
 @register_preprocessor('opportunity')
@@ -152,12 +150,17 @@ class OpportunityPreprocessor(BasePreprocessor):
         # Sensor groups
         self.sensor_groups = SENSOR_GROUPS
         self.sensor_names = list(SENSOR_GROUPS.keys())
+        self.used_channels = sorted(
+            ch for group in SENSOR_GROUPS.values()
+            for channels in group['modalities'].values()
+            for ch in channels
+        )
 
         # Preprocessing parameters
         self.window_size = config.get('window_size', 150)  # 5 seconds @ 30Hz
         self.stride = config.get('stride', 30)  # 1 second @ 30Hz
 
-        # Scaling factor (m/s^2 -> G conversion)
+        # Scaling factor (milli g -> G conversion)
         self.scale_factor = DATASETS.get('OPPORTUNITY', {}).get('scale_factor', None)
 
     def get_dataset_name(self) -> str:
@@ -312,9 +315,8 @@ class OpportunityPreprocessor(BasePreprocessor):
                     # Column selection (extract 113 channels)
                     selected_data = select_columns_opp(data)
 
-                    # Extract labels (mid-level gestures: column 113 after selection, originally column 243)
-                    # select_columns_opp keeps column 0, columns 1-113 are sensors, column 114 is label
-                    labels = selected_data[:, 113].astype(np.int32)
+                    # After select_columns_opp: 0 time, 1-113 sensors, 114 locomotion, 115 gestures
+                    labels = selected_data[:, 115].astype(np.int32)
 
                     # Extract sensor data only (columns 1-113)
                     sensor_data = selected_data[:, 1:114]
@@ -384,8 +386,12 @@ class OpportunityPreprocessor(BasePreprocessor):
         for person_id, sessions in data.items():
             cleaned_sessions = []
             for session_data, session_labels in sessions:
-                # Remove rows containing NaN/Inf
-                cleaned_data, cleaned_labels = filter_invalid_samples(session_data, session_labels)
+                # Only check the channels we keep; the unused standalone RH
+                # accelerometer is missing in almost every row of S1.
+                # Passing row numbers as labels gives back the rows that survive the filter.
+                used = session_data[:, self.used_channels]
+                _, kept_rows = filter_invalid_samples(used, np.arange(len(used)))
+                cleaned_data, cleaned_labels = session_data[kept_rows], session_labels[kept_rows]
 
                 if len(cleaned_data) == 0:
                     continue

@@ -265,7 +265,7 @@ datasets:
     num_activities: 17    # Mid-level gestures (Open/Close doors, drawers, etc.)
     num_subjects: 4       # S1-S4
     num_sensors: 7        # 7 IMUs (BACK, RUA, RLA, LUA, LLA, L_SHOE, R_SHOE)
-    num_channels: 91      # All body-worn sensors (IMU 7×13ch)
+    num_channels: 57      # 5 jacket IMUs x 9ch + 2 shoes x 6ch
     original_sampling_rate: 30  # Hz (original data)
     # No resampling needed
 
