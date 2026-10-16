@@ -209,24 +209,15 @@ class MexPreprocessor(BasePreprocessor):
                     continue
 
                 try:
-                    # Load wrist acceleration data (comma-separated, timestamp,x,y,z)
+                    # Load wrist and thigh acceleration data (comma-separated, timestamp,x,y,z)
                     wrist_df = pd.read_csv(wrist_file, header=None, names=['timestamp', 'x', 'y', 'z'])
-                    wrist_data = wrist_df[['x', 'y', 'z']].values.astype(np.float32)
-
-                    # Load thigh acceleration data (comma-separated, timestamp,x,y,z)
                     thigh_df = pd.read_csv(thigh_file, header=None, names=['timestamp', 'x', 'y', 'z'])
-                    thigh_data = thigh_df[['x', 'y', 'z']].values.astype(np.float32)
-
-                    # Align sample counts (truncate to shorter length)
-                    min_samples = min(len(wrist_data), len(thigh_data))
-                    wrist_data = wrist_data[:min_samples]
-                    thigh_data = thigh_data[:min_samples]
 
                     # Merge wrist and thigh: (num_samples, 6)
-                    sensor_data = np.hstack([wrist_data, thigh_data])
+                    sensor_data = self._on_common_grid([wrist_df, thigh_df])
 
                     # Generate labels
-                    exercise_labels = np.full(min_samples, label, dtype=int)
+                    exercise_labels = np.full(len(sensor_data), label, dtype=int)
 
                     # Add as session
                     sessions.append((sensor_data, exercise_labels))
@@ -252,6 +243,28 @@ class MexPreprocessor(BasePreprocessor):
 
         logger.info(f"Total users loaded: {len(result)}")
         return result
+
+    def _on_common_grid(self, frames: list) -> np.ndarray:
+        """
+        Interpolate the sensors onto one grid at original_sampling_rate
+
+        Both files of an exercise cover the same span, but the wrist sensor
+        delivers about 96 rows per second and the thigh sensor about 103, so
+        pairing rows by index lets them drift apart by up to 7.5 s. The grid
+        runs over the span both files cover, by their timestamps, at the rate
+        the later resampling to 30 Hz assumes.
+        """
+        clocks = [
+            pd.to_datetime(df['timestamp'], format='ISO8601').to_numpy().astype('int64') / 1e6
+            for df in frames
+        ]
+        start = max(clock[0] for clock in clocks)
+        end = min(clock[-1] for clock in clocks)
+        grid = np.arange(start, end, 1000 / self.original_sampling_rate)
+        return np.hstack([
+            np.stack([np.interp(grid, clock, df[axis].to_numpy(float)) for axis in ['x', 'y', 'z']], axis=1)
+            for clock, df in zip(clocks, frames)
+        ]).astype(np.float32)
 
     def clean_data(self, data: Dict[int, list]) -> Dict[int, list]:
         """
