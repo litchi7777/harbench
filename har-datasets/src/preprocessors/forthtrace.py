@@ -58,6 +58,10 @@ class ForthtracePreprocessor(BasePreprocessor):
         self.original_sampling_rate = 51.2  # Hz (FORTHTRACE original)
         self.target_sampling_rate = config.get('target_sampling_rate', 30)  # Hz (target)
 
+        # Gaps longer than this (about 7 missing rows) in any device are dropped,
+        # shorter ones interpolated over
+        self.max_gap_ms = 150
+
         # Sensor names (corresponding to device IDs 1-5)
         self.sensor_names = ['LeftWrist', 'RightWrist', 'Torso', 'RightThigh', 'LeftAnkle']
         self.device_id_to_sensor = {
@@ -282,7 +286,7 @@ class ForthtracePreprocessor(BasePreprocessor):
         person_id: int
     ) -> list:
         """
-        Synchronize sensors based on timestamp
+        Put all devices on one time grid, counted from each device's first row
 
         Args:
             device_data: {sensor_name: {'data': array, 'timestamps': array, 'labels': array}}
@@ -293,58 +297,74 @@ class ForthtracePreprocessor(BasePreprocessor):
                 data: (num_samples, 45) - 5 sensors × 9 channels, synchronized
                 labels: (num_samples,) - synchronized labels
         """
-        # Calculate common timestamp range across all sensors
-        all_starts = [device_data[s]['timestamps'][0] for s in self.sensor_names]
-        all_ends = [device_data[s]['timestamps'][-1] for s in self.sensor_names]
-        common_start = max(all_starts)
-        common_end = min(all_ends)
+        # One grid in time since each device's first row, interpolated per
+        # channel. Grid points inside a gap of any device are dropped.
+        period = 1000 / self.original_sampling_rate
+        clocks = {s: self._device_clock(device_data[s]['timestamps']) for s in self.sensor_names}
+        grid = np.arange(0, min(c[-1] for c in clocks.values()), period)
 
-        if common_start >= common_end:
-            logger.warning(f"USER{person_id:05d}: No common timestamp range")
+        if len(grid) == 0:
+            logger.warning(f"USER{person_id:05d}: No common time range")
             return None
 
-        # Restrict each sensor to common range
-        aligned_data = {}
+        sensor_arrays = []
+        sensor_labels = {}
+        in_gap = np.zeros(len(grid), dtype=bool)
         for sensor_name in self.sensor_names:
-            ts = device_data[sensor_name]['timestamps']
+            clock = clocks[sensor_name]
             data = device_data[sensor_name]['data']
-            labels = device_data[sensor_name]['labels']
+            sensor_arrays.append(np.stack([np.interp(grid, clock, ch) for ch in data.T], axis=1))
 
-            # Get indices within common range
-            mask = (ts >= common_start) & (ts <= common_end)
-            aligned_data[sensor_name] = {
-                'data': data[mask],
-                'timestamps': ts[mask],
-                'labels': labels[mask]
-            }
+            nearest_row = np.round(np.interp(grid, clock, np.arange(len(clock)))).astype(int)
+            sensor_labels[sensor_name] = device_data[sensor_name]['labels'][nearest_row]
 
-        # Align to minimum sample count (absorb minor differences due to timestamp offset)
-        min_samples = min(len(aligned_data[s]['data']) for s in self.sensor_names)
+            next_row = np.searchsorted(clock, grid, side='right').clip(1, len(clock) - 1)
+            in_gap |= clock[next_row] - clock[next_row - 1] > self.max_gap_ms
 
-        # Concatenate data from all sensors (fixed sensor order)
         # Order: LeftWrist, RightWrist, Torso, RightThigh, LeftAnkle
-        combined_data = np.hstack([
-            aligned_data[sensor_name]['data'][:min_samples]
-            for sensor_name in self.sensor_names
-        ])  # (min_samples, 45)
+        combined_data = np.hstack(sensor_arrays).astype(np.float32)  # (len(grid), 45)
 
         # Get labels from first sensor (LeftWrist) - should be same across all sensors
-        combined_labels = aligned_data[self.sensor_names[0]]['labels'][:min_samples]
+        combined_labels = sensor_labels[self.sensor_names[0]].copy()
 
         # Verify label consistency
         for sensor_name in self.sensor_names[1:]:
-            other_labels = aligned_data[sensor_name]['labels'][:min_samples]
-            mismatch_rate = np.mean(combined_labels != other_labels)
+            other_labels = sensor_labels[sensor_name]
+            mismatch_rate = np.mean(combined_labels[~in_gap] != other_labels[~in_gap])
             if mismatch_rate > 0.01:  # Warn if >1% mismatch
                 logger.warning(
                     f"USER{person_id:05d}: Label mismatch between LeftWrist and {sensor_name}: "
                     f"{mismatch_rate*100:.2f}%"
                 )
 
+        if in_gap.any():
+            logger.info(
+                f"USER{person_id:05d}: dropped {in_gap.mean()*100:.1f}% of the common time range "
+                f"(gaps longer than {self.max_gap_ms} ms in at least one device)"
+            )
+
         # Split into sessions at label change points (continuous label segments become sessions)
+        combined_labels[in_gap] = -1
         sessions = self._split_by_label_changes(combined_data, combined_labels)
 
-        return sessions
+        return [(d, l) for d, l in sessions if l[0] >= 0]
+
+    def _device_clock(self, timestamps: np.ndarray) -> np.ndarray:
+        """
+        Time of each row in ms since the device's first row
+
+        The time columns of the devices start at different values, but the first
+        rows were recorded at the same moment. The clock counts one sample period
+        per row and adds the largest amount by which the column has run ahead of
+        that count, which grows where rows are missing. The column has 5
+        significant digits, so rounding can put it ahead too: by at most 5 ms
+        below 10^6 ms, by up to 50 ms from there on, where the clock can
+        therefore run up to about 50 ms late.
+        """
+        period = 1000 / self.original_sampling_rate
+        rows = np.arange(len(timestamps))
+        lost = np.maximum.accumulate(timestamps - timestamps[0] - rows * period)
+        return rows * period + lost
 
     def _split_by_label_changes(
         self,
