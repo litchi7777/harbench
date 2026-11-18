@@ -477,7 +477,7 @@ DATASETS = {
         "notes": "Large-scale daily living dataset (151 participants, ~4000 hours). Using WillettsSpecific2018 schema."
     },
     "IMSB": {
-        "sensor_list": ["Wrist", "Neck"],  # Thigh excluded due to high missing values
+        "sensor_list": ["Wrist", "Neck", "Knee"],
         "modalities": ["ACC"],  # 3-axis acceleration only
         "n_classes": 6,
         "sampling_rate": 30,  # Hz (after resampling)
@@ -492,7 +492,7 @@ DATASETS = {
             4: 'Skipping',
             5: 'TableTennis'
         },
-        "notes": "IM-SportingBehaviors dataset. 20 subjects, 6 sports. Thigh sensor excluded due to 30% missing values."
+        "notes": "IM-SportingBehaviors dataset. 20 subjects, 6 sports. The knee sensor lacks the last 300 rows of the ten badminton files of subjects 1-10; those rows are dropped for all sensors."
     },
     "MOTIONSENSE": {
         "sensor_list": ["Pocket"],  # iPhone 6s in front pocket
