@@ -180,20 +180,21 @@ class HarthPreprocessor(BasePreprocessor):
                 # Load CSV data
                 df = pd.read_csv(subject_file)
 
-                # Columns: timestamp, back_x, back_y, back_z, thigh_x, thigh_y, thigh_z, label
-                if len(df.columns) != 8:
-                    logger.warning(
-                        f"Unexpected number of columns in {subject_file}: "
-                        f"{len(df.columns)} (expected 8)"
-                    )
+                # Columns are picked by name: S015 and S021 carry an extra
+                # 'index' column and S023 an unnamed one, the rest is the same
+                # (timestamp, back_x, back_y, back_z, thigh_x, thigh_y, thigh_z, label).
+                sensor_cols = ['back_x', 'back_y', 'back_z', 'thigh_x', 'thigh_y', 'thigh_z']
+                missing = [c for c in sensor_cols + ['label'] if c not in df.columns]
+                if missing:
+                    logger.warning(f"Missing columns in {subject_file}: {missing}")
                     continue
 
                 # Extract sensor data (back_xyz + thigh_xyz)
-                sensor_data = df.iloc[:, 1:7].values.astype(np.float32)
+                sensor_data = df[sensor_cols].values.astype(np.float32)
                 # sensor_data: (num_samples, 6)
 
                 # Extract and map labels
-                original_labels = df.iloc[:, 7].values.astype(int)
+                original_labels = df['label'].values.astype(int)
                 labels = np.array([self.label_mapping[l] for l in original_labels], dtype=int)
 
                 # Convert person_id to 1-indexed (idx=0 -> person_id=1 -> USER00001)
