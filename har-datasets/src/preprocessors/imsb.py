@@ -4,7 +4,10 @@ IMSB (IM-SportingBehaviors) dataset preprocessing
 IMSB dataset:
 - 6 types of sporting behaviors (Badminton, Basketball, Cycling, Football, Skipping, Table Tennis)
 - 20 subjects (professional + amateur athletes, aged 20-30)
-- 2 sensors (Wrist, Neck) * Thigh excluded due to many missing values
+- 3 accelerometers (Wrist, Neck, Knee). The raw columns are w*, n*, t*; the
+  paper (Table II) calls the third one Knee. In the ten badminton files of
+  subjects 1-10 the third one lacks the last 300 of 1000 rows; those rows are
+  dropped for all three, so every file keeps the 700 rows all sensors share.
 - Sampling rate: 20Hz (estimated)
 - Reference: portals.au.edu.pk/imc
 """
@@ -47,7 +50,7 @@ class IMSBPreprocessor(BasePreprocessor):
         # IMSB-specific configuration
         self.num_activities = 6
         self.num_subjects = 20  # Actually 85 files, but approximately 20 subjects
-        self.num_sensors = 2  # Only Wrist and Neck (Thigh excluded)
+        self.num_sensors = 3
 
         # Activity to directory mapping
         self.activity_map = {
@@ -60,10 +63,11 @@ class IMSBPreprocessor(BasePreprocessor):
         }
 
         # Sensor names and CSV column mapping
-        self.sensor_names = ['Wrist', 'Neck']
+        self.sensor_names = ['Wrist', 'Neck', 'Knee']
         self.sensor_columns = {
             'Wrist': ['wx', 'wy', 'wz'],  # 3-axis acceleration
-            'Neck': ['nx', 'ny', 'nz']     # 3-axis acceleration
+            'Neck': ['nx', 'ny', 'nz'],    # 3-axis acceleration
+            'Knee': ['tx', 'ty', 'tz']     # 3-axis acceleration
         }
 
         # Modalities (each sensor has ACC only)
@@ -72,6 +76,9 @@ class IMSBPreprocessor(BasePreprocessor):
                 'ACC': (0, 3),  # 3-axis acceleration
             },
             'Neck': {
+                'ACC': (0, 3),  # 3-axis acceleration
+            },
+            'Knee': {
                 'ACC': (0, 3),  # 3-axis acceleration
             }
         }
@@ -145,7 +152,7 @@ class IMSBPreprocessor(BasePreprocessor):
         Load CSV file
 
         Returns:
-            data: (num_samples, 6) - Wrist(3) + Neck(3)
+            data: (num_samples, 9) - Wrist(3) + Neck(3) + Knee(3)
             label: activity label ID
         """
         # Extract activity from filename
@@ -158,21 +165,13 @@ class IMSBPreprocessor(BasePreprocessor):
         # Load CSV
         df = pd.read_csv(csv_file)
 
-        # Extract required columns (Wrist + Neck, Thigh excluded)
-        wrist_cols = self.sensor_columns['Wrist']
-        neck_cols = self.sensor_columns['Neck']
+        # All three sensors, in the order of self.sensor_names: (N, 9)
+        data = df[[c for s in self.sensor_names for c in self.sensor_columns[s]]].values
 
-        # Combine data
-        wrist_data = df[wrist_cols].values  # (N, 3)
-        neck_data = df[neck_cols].values    # (N, 3)
-
-        # Remove missing values
-        valid_mask = ~(np.isnan(wrist_data).any(axis=1) | np.isnan(neck_data).any(axis=1))
-        wrist_data = wrist_data[valid_mask]
-        neck_data = neck_data[valid_mask]
-
-        # Concatenate: (N, 6)
-        data = np.hstack([wrist_data, neck_data])
+        # Keep only rows where every sensor has a value, so all three cover the
+        # same rows. Only the knee has gaps: the last 300 rows of the badminton
+        # files of subjects 1-10.
+        data = data[~np.isnan(data).any(axis=1)]
 
         return data, label
 
@@ -183,7 +182,7 @@ class IMSBPreprocessor(BasePreprocessor):
         Returns:
             Dictionary of {subject_id: [(data, labels), ...]}
                 Each element is a CSV file (session) unit
-                data: (num_samples, 6) - Wrist(3) + Neck(3)
+                data: (num_samples, 9) - Wrist(3) + Neck(3) + Knee(3)
                 labels: (num_samples,) - activity labels
         """
         imsb_dir = self.raw_data_path / 'imsb'
@@ -289,11 +288,9 @@ class IMSBPreprocessor(BasePreprocessor):
             logger.info(f"Processing USER{subject_id:05d} ({len(sessions)} sessions)")
             processed[subject_id] = {}
 
-            # Split into Wrist and Neck session lists
-            wrist_sessions = [(d[:, 0:3], l) for d, l in sessions]
-            neck_sessions = [(d[:, 3:6], l) for d, l in sessions]
-
-            for sensor_name, sensor_sessions in [('Wrist', wrist_sessions), ('Neck', neck_sessions)]:
+            # One session list per sensor, three columns each
+            for i, sensor_name in enumerate(self.sensor_names):
+                sensor_sessions = [(d[:, 3 * i:3 * i + 3], l) for d, l in sessions]
                 # Apply sliding window per session
                 windowed_data, windowed_labels = create_sliding_windows_multi_session(
                     sensor_sessions,
